@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Earthquake Map</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+  <!-- D3.js -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- Leaflet.heat plugin -->
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+
+  <!-- CesiumJS -->
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Cesium.js"></script>
+
+  <!-- Leaflet Draw Plugin -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+  <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+
+
+</head>
+<body>
+  <div id="map-title">🌍 Quakes over Time</div>
+
+  <!-- Map Controls -->
+<div id="map-controls">
+  <button id="basemap-toggle" class="circle-btn" title="Basemap and Overlays">
+    <i data-lucide="layers"></i>
+  </button>
+    <div id="basemap-menu" class="hidden">
+      <label><input type="radio" name="basemap" value="streets" /> Streets</label><br/>
+      <label><input type="radio" name="basemap" value="satellite" /> Satellite</label><br/>
+      <label><input type="radio" name="basemap" value="dark" checked /> Dark</label><br/>
+
+      <strong>Overlays</strong><br>
+      <label><input type="checkbox" id="toggle-circles" checked> Circle Markers</label><br>
+      <label><input type="checkbox" id="toggle-heatmap" checked> Heatmap</label>
+    </div>
+    <!-- Map Legend Button -->
+    <button id="legend-toggle" class="circle-btn" title="Map Legend">
+      <i data-lucide="book-open"></i>
+    </button>
+<div id="legend-box" class="hidden">
+  <h4>Legend</h4>
+
+  <div><strong>Color → Magnitude</strong></div>
+  <div><span class="legend-circle small green"></span> Mag &lt; 4.0</div>
+  <div><span class="legend-circle small yellow"></span> Mag 4.0 - 4.9</div>
+  <div><span class="legend-circle small orange"></span> Mag 5.0 - 5.9</div>
+  <div><span class="legend-circle small red"></span> Mag ≥ 6.0</div>
+
+  <br/>
+
+  <div><strong>Size → Depth</strong></div>
+  <div><span class="legend-circle depth4"></span> Depth ≤ 10 km</div>
+  <div><span class="legend-circle depth6"></span> Depth 11–30 km</div>
+  <div><span class="legend-circle depth8"></span> Depth 31–70 km</div>
+  <div><span class="legend-circle depth10"></span> Depth 71–300 km</div>
+  <div><span class="legend-circle depth12"></span> Depth &gt; 300 km</div>
+</div>
+
+<!-- Advanced Search Button -->
+<button id="advanced-search-toggle" class="circle-btn" title="Advance Search">
+  <i data-lucide="search"></i>
+</button>
+
+<div id="advanced-search-panel" class="hidden">
+  <div id="search-panel-header">
+    <span>Advanced Search</span>
+    <button id="close-search-panel">❌</button>
+  </div>
+
+  <input type="text" id="country-input" placeholder="Enter country name..." autocomplete="off" />
+  <div id="suggestions"></div>
+  <button id="country-search-btn">Search</button>
+  <button id="clear-search-btn">Clear</button>
+
+  <div id="mini-map-container" class="hidden">
+    <div id="mini-map"></div>
+  </div>
+</div>
+
+
+
+<!-- Date Range Selector -->
+<button id="date-range-toggle" class="circle-btn" title="Select Date Range">
+  <i data-lucide="calendar"></i>
+</button>
+
+<div id="date-range-panel" class="hidden">
+  <label for="start-date">Start Date:</label>
+  <input type="date" id="start-date">
+
+  <label for="end-date">End Date:</label>
+  <input type="date" id="end-date">
+
+  <button id="apply-date-range">Filter</button>
+  <button id="reset-date-range">Reset</button>
+
+</div>
+
+
+<button id="brush-toggle" class="circle-btn" title="Brush Tool">
+  <i data-lucide="brush"></i>
+</button>
+
+</div>
+
+<!-- <div id="magnitude-chart-panel">
+  <h3>Earthquake Frequency by Magnitude</h3>
+  <svg id="magnitude-chart" width="500" height="300"></svg>
+</div> -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  
+  
+  <div id="map"></div>
+
+  <!-- <button id="toggle-3d">🌍</button> -->
+
+
+  <!-- Visualizations Toggle Button -->
+  <button id="viz-toggle" class="circle-btn" title="Map Legend">
+    <i data-lucide="bar-chart-3"></i>
+  </button>
+
+<!-- Sliding Panel -->
+<div id="viz-panel" class="hidden">
+  <h3>Visual Insights</h3>
+
+  <div id="magnitude-chart-panel">
+    <h4>By Magnitude</h4>
+    <svg id="magnitude-chart" width="100%" height="250"></svg>
+  </div>
+
+  <div id="depth-chart-panel">
+    <h4>By Depth</h4>
+    <svg id="depth-chart" width="100%" height="250"></svg>
+  </div>
+</div>
+  <!-- Cesium Globe Container
+  <div id="cesiumContainer" class="hidden"></div> -->
+
+   <!-- Animation Box-->
+
+   <div id="timeline-container">
+    <button id="timeline-play-btn">▶️</button>
+    <select id="speed-selector" title="Playback Speed">
+      <option value="1">1x</option>
+      <option value="2">2x</option>
+      <option value="4">4x</option>
+    </select>
+    
+    <div id="timeline-info">
+      <span id="timeline-label">Year: 2025</span>
+      <input type="range" id="timeline-slider" min="2004" max="2025" value="2025" step="0.083">
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+  
+  
+
+  <!-- Script -->
+  <script src="script.js"></script>
+
+ 
+  
+  
+</body>
+</html>
